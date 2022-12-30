@@ -3,6 +3,32 @@ Transform: AWS::Serverless-2016-10-31
 Description: Dynamic content service with RSS parser
 
 Resources:
+  MyWAFACL:
+    Type: 'AWS::WAFv2::WebACL'
+    Properties:
+      Scope: "REGIONAL"
+      CustomResponseBodies: # Define a response from WAF
+        CountryNotValid:
+          Content: Country not allowed
+          ContentType: TEXT_PLAIN
+      DefaultAction:
+        Block:
+          CustomResponse: # Choose a defined template to respond when blocked
+            ResponseCode: "403"
+            CustomResponseBodyKey: CountryNotValid
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: WebAcLimit100
+
+
+
+  CloudFrontOriginAccessIdentity:
+    Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'Serverless website OA'
+  
   DDBtable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -80,31 +106,6 @@ Resources:
             Method: get
             ApiId: !Ref MyApi
             
-  MyWAFACL:
-    Type: 'AWS::WAFv2::WebACL'
-    Properties:
-      Scope: "REGIONAL"
-      CustomResponseBodies: # Define a response from WAF
-        CountryNotValid:
-          Content: Country not allowed
-          ContentType: TEXT_PLAIN
-      DefaultAction:
-        Block:
-          CustomResponse: # Choose a defined template to respond when blocked
-            ResponseCode: "403"
-            CustomResponseBodyKey: CountryNotValid
-      VisibilityConfig:
-        SampledRequestsEnabled: true
-        CloudWatchMetricsEnabled: true
-        MetricName: WebAcLimit100
-
-
-
-  CloudFrontOriginAccessIdentity:
-    Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
-    Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: 'Serverless website OA'
 
   CloudFront:  
     Type: AWS::CloudFront::Distribution
@@ -138,8 +139,7 @@ Resources:
   MyWAFAssociation:
     Type: AWS::WAFv2::WebACLAssociation
     Properties: 
-      ResourceArn: !Sub 
-        - "arn:aws:cloudfront::944196645553:distribution/EFO0ZANJV4PVE"
+      ResourceArn: !Sub arn:aws:cloudfront::944196645553:distribution/CloudFrontOriginAccessIdentity
       WebACLArn: !GetAtt  MyWAFACL.Arn
 Outputs: 
   MyDomainName:
